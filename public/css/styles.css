@@ -1,0 +1,30 @@
+:root{
+	--accent1: #0052d4;
+	--accent2: #6fb1fc;
+	--muted: #6c757d;
+}
+html,body{height:100%;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+body { background: linear-gradient(180deg,#f4f8ff 0%, #f7fbff 100%); }
+.navbar-brand { font-weight:700; letter-spacing:0.6px }
+.bg-gradient{background:linear-gradient(90deg,var(--accent1),var(--accent2)) !important}
+.card { border: none; border-radius:12px }
+.card .card-body img { width: 100%; height: auto }
+.preview-wrap{position:relative;display:flex;align-items:center;justify-content:center}
+#preview{max-height:320px;border-radius:8px;box-shadow:0 6px 18px rgba(16,24,40,0.08);transition:transform .22s ease}
+#preview:hover{transform:translateY(-6px)}
+
+/* Camera modal */
+.camera-modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,rgba(2,6,23,0.6),rgba(2,6,23,0.8));z-index:1050}
+.camera-inner{background:#fff;padding:16px;border-radius:12px;max-width:420px;width:92%;box-shadow:0 10px 40px rgba(2,6,23,0.6);text-align:center}
+#cameraVideo{width:100%;height:auto;border-radius:8px;background:#000}
+.camera-actions{display:flex;justify-content:center}
+
+/* Buttons */
+.btn-outline-primary{border-color:rgba(255,255,255,0.14)}
+
+/* Small animations */
+.fade-in{animation:fadeIn .45s ease both}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+.btn-primary{background:linear-gradient(90deg,var(--accent1),#2aa1ff);border:none}
+

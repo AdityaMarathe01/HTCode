@@ -59,11 +59,16 @@ app.use(limiter);
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(UPLOAD_DIR));
 
+// Serve admin page at /admin (so users can visit /admin without .html)
+app.get(['/admin', '/admin/'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
 // Multer setup
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
   fileFilter: (req, file, cb) => {
     if (!file.mimetype.startsWith('image/')) return cb(new Error('Only image uploads allowed'));
     cb(null, true);
@@ -188,6 +193,19 @@ app.delete('/api/admin/report/:id', authMiddleware, (req, res) => {
       res.json({ success: true });
     });
   });
+});
+
+// Generic error handler - return JSON for Multer and other errors
+app.use((err, req, res, next) => {
+  console.error(err && err.stack ? err.stack : err);
+  if (err && err.name === 'MulterError') {
+    // Multer errors (file too large, etc.)
+    return res.status(400).json({ error: err.message || 'File upload error' });
+  }
+  if (err && err.message && err.message.includes('Only image uploads allowed')) {
+    return res.status(400).json({ error: err.message });
+  }
+  res.status(500).json({ error: 'Server error' });
 });
 
 const PORT = parseInt(process.env.PORT, 10) || 3000;

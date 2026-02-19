@@ -55,6 +55,14 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('formMsg').innerHTML = '';
   });
 
+  // Open file button (explicit) - triggers the file input
+  const openFileBtn = document.getElementById('openFileBtn');
+  if (openFileBtn) {
+    openFileBtn.addEventListener('click', () => {
+      imageInput.click();
+    });
+  }
+
   // Camera modal handlers
   openCamera.addEventListener('click', async () => {
     cameraModal.classList.remove('d-none');
@@ -128,8 +136,16 @@ document.addEventListener('DOMContentLoaded', () => {
     msg.innerHTML = '<div class="alert alert-primary">Uploading...</div>';
     try {
       const res = await fetch('/api/report', { method: 'POST', body: fd });
-      const j = await res.json();
-      if (!res.ok) throw new Error(j.error || 'Failed');
+      let j = null;
+      const ctype = (res.headers.get('content-type') || '').toLowerCase();
+      if (ctype.includes('application/json')) {
+        j = await res.json();
+      } else {
+        // Non-JSON response (likely an HTML error page). Read text and show concise info.
+        const txt = await res.text();
+        throw new Error(`Server responded ${res.status}: ${txt.slice(0,200).replace(/\s+/g,' ')}${txt.length>200? '...':''}`);
+      }
+      if (!res.ok) throw new Error(j.error || `Server responded ${res.status}`);
       msg.innerHTML = '<div class="alert alert-success">Report submitted. Thank you.</div>';
       form.reset();
       preview.classList.add('d-none');

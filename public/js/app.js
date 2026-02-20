@@ -14,18 +14,26 @@ document.addEventListener('DOMContentLoaded', () => {
   let cameraStream = null;
   let capturedBlob = null;
 
-  // Location button
-  getLoc.addEventListener('click', () => {
-    requestLocation();
-  });
+  // If this script runs on a page without the report form, avoid attaching handlers
+  // but still allow gallery-only pages to load images.
+  function safeLoadGalleryIfNeeded() {
+    if (gallery) loadGallery().catch(() => {});
+  }
 
-  // Automatically request location when page loads
+  // Location button (guarded)
+  if (getLoc) {
+    getLoc.addEventListener('click', () => {
+      requestLocation();
+    });
+  }
+
+  // Automatically request location when page loads (only if locStatus exists)
   (function autoRequestLocation(){
-    requestLocation();
+    if (locStatus) requestLocation();
   })();
 
   function requestLocation(){
-    locStatus.textContent = 'Getting location...';
+    if (locStatus) locStatus.textContent = 'Getting location...';
     if (!navigator.geolocation) {
       locStatus.textContent = '❌ Geolocation not supported in this browser';
       locStatus.style.color = '#d32f2f';
@@ -34,10 +42,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        document.getElementById('latitude').value = pos.coords.latitude;
-        document.getElementById('longitude').value = pos.coords.longitude;
-        locStatus.textContent = `✓ Location set (${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)})`;
-        locStatus.style.color = '#2e7d32';
+        const latEl = document.getElementById('latitude');
+        const lonEl = document.getElementById('longitude');
+        if (latEl) latEl.value = pos.coords.latitude;
+        if (lonEl) lonEl.value = pos.coords.longitude;
+        if (locStatus) {
+          locStatus.textContent = `✓ Location set (${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)})`;
+          locStatus.style.color = '#2e7d32';
+        }
       },
       (err) => {
         let msg = 'Location unavailable';
@@ -48,8 +60,10 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (err.code === 3) {
           msg = '❌ Location request timed out - Try again';
         }
-        locStatus.textContent = msg;
-        locStatus.style.color = '#d32f2f';
+        if (locStatus) {
+          locStatus.textContent = msg;
+          locStatus.style.color = '#d32f2f';
+        }
       },
       { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
     );
@@ -59,26 +73,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Open file button (explicit) - triggers the file input
   const openFileBtn = document.getElementById('openFileBtn');
-  if (openFileBtn) {
+  if (openFileBtn && imageInput) {
     openFileBtn.addEventListener('click', () => {
       imageInput.click();
     });
   }
 
-  // Camera modal handlers
-  openCamera.addEventListener('click', async () => {
-    cameraModal.classList.remove('d-none');
-    try {
-      cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
-      cameraVideo.srcObject = cameraStream;
-      await cameraVideo.play();
-    } catch (err) {
-      alert('Unable to open camera: ' + err.message);
-      cameraModal.classList.add('d-none');
-    }
-  });
+  // Camera modal handlers (guarded)
+  if (openCamera && cameraModal && cameraVideo) {
+    openCamera.addEventListener('click', async () => {
+      cameraModal.classList.remove('d-none');
+      try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+        cameraVideo.srcObject = cameraStream;
+        await cameraVideo.play();
+      } catch (err) {
+        alert('Unable to open camera: ' + err.message);
+        cameraModal.classList.add('d-none');
+      }
+    });
+  }
 
-  captureBtn.addEventListener('click', () => {
+  if (captureBtn) {
+    captureBtn.addEventListener('click', () => {
     if (!cameraStream) return;
     const vw = cameraVideo.videoWidth || 640;
     const vh = cameraVideo.videoHeight || 480;
@@ -94,12 +111,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const submitBtn = form.querySelector('button[type="submit"]');
       if (submitBtn) submitBtn.disabled = false;
     }, 'image/jpeg', 0.9);
-  });
+    });
+  }
 
-  closeCamera.addEventListener('click', () => {
-    stopCamera();
-    cameraModal.classList.add('d-none');
-  });
+  if (closeCamera) {
+    closeCamera.addEventListener('click', () => {
+      stopCamera();
+      if (cameraModal) cameraModal.classList.add('d-none');
+    });
+  }
 
   function stopCamera() {
     if (cameraStream) {
@@ -108,8 +128,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Submit handler
-  form.addEventListener('submit', async (e) => {
+  // Submit handler (guarded)
+  if (form) {
+    form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(form);
     const msg = document.getElementById('formMsg');
@@ -133,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     // Ensure at least one image exists (file input or captured blob)
-    const fileInput = imageInput.files && imageInput.files[0];
+    const fileInput = imageInput && imageInput.files && imageInput.files[0];
     if (!fileInput && !capturedBlob) {
       msg.innerHTML = '<div class="alert alert-warning">Please capture a photo or choose a file before submitting.</div>';
       return;
@@ -173,7 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (preview) preview.classList.add('d-none');
       locStatus.textContent = 'Location required for submission';
       capturedBlob = null;
-      loadGallery(); // Refresh gallery after submit
+        safeLoadGalleryIfNeeded(); // Refresh gallery after submit
     } catch (err) {
       msg.innerHTML = `<div class='alert alert-primary'>${err.message}</div>`;
     } finally {
@@ -202,7 +223,10 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) {
       gallery.innerHTML = '<div class="text-primary">Could not load images.</div>';
     }
+    });
   }
-  loadGallery();
+
+  // Load gallery on pages that include it
+  safeLoadGalleryIfNeeded();
 });
       // If a captured blob exists (from camera), append it as the image

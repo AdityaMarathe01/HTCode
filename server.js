@@ -1,3 +1,4 @@
+
 require('dotenv').config();
 const express = require('express');
 const helmet = require('helmet');
@@ -13,12 +14,16 @@ const validator = require('validator');
 const cors = require('cors');
 const morgan = require('morgan');
 
+
 const UPLOAD_DIR = path.join(__dirname, 'uploads');
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const DB_PATH = path.join(__dirname, 'data.db');
 const db = new sqlite3.Database(DB_PATH);
 
+// Simple in-memory cache for geocoding results to avoid repeated API calls
+const geocodeCache = new Map(); // key -> { address, ts }
+const GEOCODE_TTL_MS = 1000 * 60 * 60; // 1 hour
 // Initialize DB
 db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS reports (
@@ -42,22 +47,46 @@ db.serialize(() => {
   )`);
 });
 
+
 const app = express();
+// Set CSP header to allow OpenCage API
+// Set CSP header to allow OpenCage API, Bootstrap CDN, and all required resources for geocoding and UI
+app.use((req, res, next) => {
+  res.setHeader(
+    "Content-Security-Policy",
+    [
+      "default-src 'self';",
+      "connect-src 'self' https://api.opencagedata.com https://cdn.jsdelivr.net;",
+      "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;",
+      "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;",
+      "img-src 'self' data: https://cdn.jsdelivr.net;",
+      "font-src 'self' https://cdn.jsdelivr.net;"
+    ].join(' ')
+  );
+  next();
+});
 app.use(helmet());
 app.use(express.json({ limit: '8mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 app.use(morgan('combined'));
 
-const limiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 30,
-  message: 'Too many requests, please slow down.'
-});
-app.use(limiter);
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(UPLOAD_DIR));
+
+// Rate limiter, but skip static assets
+const limiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 100, // more generous for dev
+  message: 'Too many requests, please slow down.'
+});
+app.use((req, res, next) => {
+  if (req.path.startsWith('/js/') || req.path.startsWith('/css/') || req.path.startsWith('/uploads/') || req.path.startsWith('/images/') || req.path.endsWith('.js') || req.path.endsWith('.css')) {
+    return next();
+  }
+  return limiter(req, res, next);
+});
 
 // Serve admin page at /admin (so users can visit /admin without .html)
 app.get(['/admin', '/admin/'], (req, res) => {
@@ -80,17 +109,22 @@ function sanitizeInput(s) {
   return validator.escape(String(s)).trim();
 }
 
-// Ensure admin exists using env vars ADMIN_USER and ADMIN_PASS
+// Ensure admin exists and password always matches .env on startup
 async function ensureAdmin() {
   const user = process.env.ADMIN_USER || 'admin';
   const pass = process.env.ADMIN_PASS || 'ChangeThisPassword!';
   db.get('SELECT * FROM admin WHERE username = ?', [user], (err, row) => {
     if (err) return console.error(err);
+    const hash = bcrypt.hashSync(pass, 10);
     if (!row) {
-      const hash = bcrypt.hashSync(pass, 10);
       db.run('INSERT INTO admin (username, password_hash) VALUES (?, ?)', [user, hash], (e) => {
         if (e) console.error('Failed to insert admin', e);
         else console.log('Admin user created (from env).');
+      });
+    } else {
+      db.run('UPDATE admin SET password_hash = ? WHERE username = ?', [hash, user], (e) => {
+        if (e) console.error('Failed to update admin password', e);
+        else console.log('Admin password updated from env.');
       });
     }
   });
@@ -109,22 +143,35 @@ app.post('/api/report', upload.single('image'), async (req, res) => {
     const lat = parseFloat(req.body.latitude);
     const lon = parseFloat(req.body.longitude);
 
-    if (!req.file) return res.status(400).json({ error: 'Image required' });
+    // Accept multiple images: uploaded file and/or captured (base64 in req.body.captured_image)
+    let imagePaths = [];
+    if (req.file) {
+      const filename = `${Date.now()}-${Math.random().toString(36).slice(2,8)}.jpg`;
+      const outPath = path.join(UPLOAD_DIR, filename);
+      await sharp(req.file.buffer).resize({ width: 1600, withoutEnlargement: true }).jpeg({ quality: 85 })
+        .toFile(outPath);
+      imagePaths.push(`/uploads/${filename}`);
+    }
+    if (req.body.captured_image) {
+      // Data URL or base64 string
+      let base64 = req.body.captured_image;
+      if (base64.startsWith('data:image')) base64 = base64.split(',')[1];
+      const buffer = Buffer.from(base64, 'base64');
+      const filename = `${Date.now()}-${Math.random().toString(36).slice(2,8)}-captured.jpg`;
+      const outPath = path.join(UPLOAD_DIR, filename);
+      await sharp(buffer).resize({ width: 1600, withoutEnlargement: true }).jpeg({ quality: 85 })
+        .toFile(outPath);
+      imagePaths.push(`/uploads/${filename}`);
+    }
+    if (!imagePaths.length) return res.status(400).json({ error: 'Image required' });
     if (!isFinite(lat) || !isFinite(lon)) return res.status(400).json({ error: 'Geo coordinates required' });
     if (!['low', 'moderate', 'high'].includes(severity)) return res.status(400).json({ error: 'Invalid severity' });
-
-    // Process image: re-encode, strip metadata, max width 1600
-    const filename = `${Date.now()}-${Math.random().toString(36).slice(2,8)}.jpg`;
-    const outPath = path.join(UPLOAD_DIR, filename);
-    // Note: do NOT call withMetadata() to ensure EXIF is removed
-    await sharp(req.file.buffer).resize({ width: 1600, withoutEnlargement: true }).jpeg({ quality: 85 })
-      .toFile(outPath);
 
     const ip = req.ip || req.connection.remoteAddress;
     const ua = req.get('User-Agent') || '';
 
     const stmt = db.prepare('INSERT INTO reports (name, phone, severity, latitude, longitude, image_path, ip, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-    stmt.run(name, phone, severity, lat, lon, `/uploads/${filename}`, ip, ua, function (err) {
+    stmt.run(name, phone, severity, lat, lon, imagePaths.join(','), ip, ua, function (err) {
       if (err) return res.status(500).json({ error: 'DB error' });
       res.json({ success: true, id: this.lastID });
     });
@@ -161,11 +208,54 @@ function authMiddleware(req, res, next) {
   }
 }
 
-// Admin: list reports
+// Admin: list reports (enhanced with server-side reverse geocoding)
 app.get('/api/admin/reports', authMiddleware, (req, res) => {
-  db.all('SELECT * FROM reports ORDER BY created_at DESC LIMIT 1000', [], (err, rows) => {
+  db.all('SELECT * FROM reports ORDER BY created_at DESC LIMIT 1000', [], async (err, rows) => {
     if (err) return res.status(500).json({ error: 'DB error' });
-    res.json({ reports: rows });
+    try {
+      const key = process.env.OPENCAGE_API_KEY || '25edd74c56a44b3a86acc5aa03c2d8b7';
+      const enhanced = await Promise.all(rows.map(async (r) => {
+        r.address = null;
+        const lat = parseFloat(r.latitude);
+        const lon = parseFloat(r.longitude);
+        if (!isFinite(lat) || !isFinite(lon)) return r;
+        const cacheKey = `${lat.toFixed(6)},${lon.toFixed(6)}`;
+        const cached = geocodeCache.get(cacheKey);
+        if (cached && (Date.now() - cached.ts) < GEOCODE_TTL_MS) {
+          r.address = cached.address;
+          return r;
+        }
+        try {
+          const q = encodeURIComponent(`${lat},${lon}`);
+          const url = `https://api.opencagedata.com/geocode/v1/json?q=${q}&key=${key}&no_annotations=1&limit=1`;
+          const resp = await fetch(url);
+          if (!resp.ok) throw new Error('OpenCage error');
+          const data = await resp.json();
+          if (data && data.results && data.results.length) {
+            const comp = data.results[0].components || {};
+            const formatted = data.results[0].formatted || '';
+            const district = comp.district || comp.county || comp.city_district || '';
+            const state = comp.state || comp.region || '';
+            const city = comp.city || comp.town || comp.village || '';
+            let addr = '';
+            if (district && state) addr = `${district}, ${state}`;
+            else if (state && city) addr = `${city}, ${state}`;
+            else if (state) addr = state;
+            else if (city) addr = city;
+            else addr = formatted || '';
+            if (!addr) addr = null;
+            r.address = addr;
+            geocodeCache.set(cacheKey, { address: addr, ts: Date.now() });
+          }
+        } catch (e) {
+          r.address = null;
+        }
+        return r;
+      }));
+      res.json({ reports: enhanced });
+    } catch (e) {
+      res.json({ reports: rows });
+    }
   });
 });
 

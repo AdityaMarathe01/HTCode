@@ -1,0 +1,141 @@
+/* Login page styles */
+body {
+	font-family: 'Inter', Arial, sans-serif;
+	background: #f4f8fb;
+	color: #1a237e;
+	margin: 0;
+}
+
+.modern-navbar {
+	background: #e3f2fd;
+	padding: 0;
+	box-shadow: 0 2px 8px rgba(25,118,210,0.06);
+}
+.nav-flex {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 12px 32px;
+}
+.nav-brand-group {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+}
+.navbar-logo {
+	width: 48px;
+	height: 48px;
+	object-fit: cover;
+	border-radius: 50%;
+	border: 2px solid #1976d2;
+	box-shadow: 0 2px 8px rgba(25,118,210,0.10);
+}
+.navbar-brand {
+	color: #1976d2;
+	font-weight: 800;
+	font-size: 1.4rem;
+	letter-spacing: 0.5px;
+	text-decoration: none;
+}
+#headerSubtitle {
+	color: #1976d2;
+	opacity: 0.8;
+	font-size: 1rem;
+	font-weight: 600;
+}
+.nav-actions {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.login-main {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: calc(100vh - 80px);
+	padding: 40px 16px;
+}
+#loginCard { position: relative; z-index: 1; }
+
+/* decorative background image for login page (subtle, translucent)
+   uses Udaan_pic.jpg from public/ folder */
+.login-main {
+	position: relative;
+}
+.login-main::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: url('/Udaan_pic.jpg') center/cover no-repeat;
+	opacity: 0.14;
+	filter: saturate(0.9) brightness(1.05);
+	z-index: 0;
+}
+#loginCard {
+	width: 100%;
+	max-width: 450px;
+	background: rgba(255,255,255,0.96);
+	border-radius: 24px;
+	box-shadow: 0 4px 24px rgba(25,118,210,0.10);
+	padding: 48px 40px;
+	margin: 0 auto;
+	position: relative;
+	z-index: 1;
+}
+#loginCard .page-title {
+	color: #1976d2;
+	font-size: 2.2rem;
+	font-weight: 800;
+	margin-bottom: 28px;
+	text-align: center;
+}
+#loginCard .form-label {
+	font-weight: 700;
+	color: #1976d2;
+	font-size: 1.05rem;
+	margin-bottom: 8px;
+}
+#loginCard .form-control {
+	width: 100%;
+	padding: 12px 14px;
+	border-radius: 10px;
+	border: 1.5px solid #b6d0ee;
+	margin-bottom: 18px;
+	font-size: 1rem;
+	background: #f4f8fb;
+	font-family: 'Inter', Arial, sans-serif;
+	transition: border 0.2s;
+}
+#loginCard .form-control:focus {
+	border: 1.5px solid #1976d2;
+	outline: none;
+	background: #fff;
+}
+.mb-3 {
+	margin-bottom: 18px;
+}
+#loginCard .btn-primary {
+	width: 100%;
+	background: linear-gradient(90deg, #1976d2 0%, #42a5f5 100%);
+	color: #fff;
+	font-weight: 800;
+	border: none;
+	border-radius: 10px;
+	padding: 14px 0;
+	font-size: 1.1rem;
+	margin-top: 12px;
+	transition: background 0.2s;
+	box-shadow: 0 2px 8px rgba(25,118,210,0.10);
+}
+#loginCard .btn-primary:hover {
+	background: linear-gradient(90deg, #1251a3 0%, #1976d2 100%);
+}
+#loginMsg {
+	margin-top: 10px;
+	text-align: center;
+}
+#loginCard .alert {
+	margin-top: 10px;
+	font-size: 0.98rem;
+}

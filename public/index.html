@@ -4,26 +4,43 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Udaan — Report</title>
+    <link rel="icon" type="image/png" href="/Logo.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/styles.css">
   </head>
   <body>
-    <nav class="navbar navbar-dark bg-gradient mb-4">
-      <div class="container-fluid">
-        <a class="navbar-brand" href="#">Udaan</a>
-        <span class="navbar-text text-white">Report suspected trafficking — geo-tagged photos</span>
+    <nav class="navbar modern-navbar">
+      <div class="container nav-flex">
+        <div class="nav-brand-group">
+          <img src="/Logo.png" alt="Udaan Logo" class="navbar-logo">
+          <a class="navbar-brand" href="/">Udaan</a>
+          <span id="headerSubtitle">Reporting Platform</span>
+        </div>
+        <div class="nav-actions">
+          <a href="/admin" class="admin-link">Admin</a>
+        </div>
       </div>
     </nav>
 
-    <main class="container">
-      <div class="row">
-        <div class="col-md-6">
-          <div class="card shadow-sm mb-4">
-            <div class="card-body">
-              <h5 class="card-title">Submit a Report</h5>
-              <form id="reportForm">
+    <!-- Hero Banner -->
+    <section class="hero-banner">
+      <img src="/Udaan_pic.jpg" alt="Udaan Hero" class="hero-bg-img">
+      <div class="hero-content">
+        <h1>Stop Human Trafficking</h1>
+        <p class="hero-sub">Report suspicious activity. Save lives. Your reports are confidential.</p>
+      </div>
+    </section>
+
+    <main class="index-main\">
+      <div class=\"form-wrapper\">
+        <div class=\"form-container\">
+          <h2 class=\"form-title\">Report Human Trafficking</h2>
+          <p class=\"form-subtitle\">Your report can help save lives. Please provide as much detail as possible. All reports are confidential.</p>
+          <form id=\"reportForm\" autocomplete=\"off\">
                 <div class="mb-3">
                   <label class="form-label">Name (optional)</label>
                   <input name="name" class="form-control" maxlength="100">
@@ -33,57 +50,41 @@
                   <input name="phone" class="form-control" maxlength="30">
                 </div>
                 <div class="mb-3">
-                  <label class="form-label">Severity</label>
-                  <select name="severity" class="form-select" required>
-                    <option value="low">Low</option>
-                    <option value="moderate">Moderate</option>
-                    <option value="high">High</option>
+                  <label class="form-label">Severity <span class="text-primary">*</span></label>
+                  <select name="severity" class="form-select fw-bold text-primary bg-light" required>
+                    <option value="" disabled selected>Select severity</option>
+                    <option value="low" style="color:#1976d2;">Low (Suspicious)</option>
+                    <option value="moderate" style="color:#d27c19;">Moderate (Likely)</option>
+                    <option value="high" style="color:#d21919;">High (Urgent)</option>
                   </select>
                 </div>
                 <div class="mb-3">
-                  <label class="form-label">Photo (required)</label>
-                    <div class="d-flex gap-2 align-items-center">
-                      <input type="file" name="image" id="imageInput" accept="image/*" class="form-control" style="flex:1">
-                      <button id="openFileBtn" type="button" class="btn btn-outline-secondary" title="Choose file"><i class="bi bi-folder-fill"></i></button>
-                      <button id="openCamera" type="button" class="btn btn-outline-primary" title="Open camera"><i class="bi bi-camera-fill"></i></button>
-                    </div>
-                </div>
-
-                <input type="hidden" name="latitude">
-                <input type="hidden" name="longitude">
-                <!-- Honeypot field to catch bots -->
-                <input type="text" name="website" style="display:none">
-
-                <div class="mb-3 d-flex align-items-center">
-                  <button id="getLoc" type="button" class="btn btn-outline-primary me-2">Get Location</button>
-                  <span id="locStatus" class="text-muted small">Location required for submission</span>
-                </div>
-
-                <div class="mb-3">
-                  <div class="preview-wrap">
-                    <img id="preview" src="" alt="preview" class="img-fluid d-none rounded border" style="max-height:300px">
-                    <canvas id="captureCanvas" class="d-none"></canvas>
+                  <label class="form-label">Photo <span class="text-primary">*</span></label>
+                  <div class="d-flex gap-2 align-items-center">
+                    <input type="file" name="image" id="imageInput" accept="image/*" class="form-control form-control-modern">
+                    <button id="openFileBtn" type="button" class="btn btn-file" title="Choose file"><i class="bi bi-folder-fill"></i></button>
+                    <button id="openCamera" type="button" class="btn btn-camera" title="Open camera"><i class="bi bi-camera-fill"></i></button>
                   </div>
                 </div>
-
-                <button type="submit" class="btn btn-primary">Submit Report</button>
+                <input type="hidden" name="latitude" id="latitude">
+                <input type="hidden" name="longitude" id="longitude">
+                <!-- Honeypot field to catch bots -->
+                <input type="text" name="website" style="display:none">
+                <div class="mb-3 d-flex align-items-center gap-2">
+                  <button id="getLoc" type="button" class="btn btn-get-location">Get Location</button>
+                  <span id="locStatus" class="location-status">Location required for submission</span>
+                </div>
+                <!-- Preview removed for clarity and simplicity -->
+                <div class="mb-3 d-none">
+                  <canvas id="captureCanvas" class="d-none"></canvas>
+                </div>
+                <button type="submit" class="btn btn-submit w-100">Submit Report</button>
                 <div id="formMsg" class="mt-3"></div>
               </form>
-            </div>
-          </div>
         </div>
-
-        <div class="col-md-6">
-          <div class="card shadow-sm mb-4">
-            <div class="card-body">
-              <h5 class="card-title">About Udaan</h5>
-              <p>Udaan is a secure reporting prototype intended for government/NGO intake of geo-tagged reports. Photos have metadata stripped and are reviewed by admins.</p>
-              <p class="text-muted small">This demo includes basic protections. For production, integrate a content moderation service and use HTTPS.</p>
-              <div class="mt-3">
-                <img src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=800&auto=format&fit=crop&ixlib=rb-4.0.3&s=8d2c2f3e9d8a7f1a3f4f" class="img-fluid rounded" alt="hero">
-              </div>
-            </div>
-          </div>
+        <div class="recent-reports">
+          <h4 class="reports-title">Recent Reports (Images)</h4>
+          <div id="gallery" class="gallery-grid"></div>
         </div>
       </div>
     </main>
@@ -99,6 +100,10 @@
       </div>
     </div>
 
+    <footer class="bg-primary text-center text-light py-3 mt-5 border-top border-primary">
+      <div>Need help? Call the National Human Trafficking Hotline: <span class="fw-bold text-white">1-888-373-7888</span></div>
+      <div class="small">&copy; 2026 HTCode. <a class="text-white text-decoration-underline">User Guide</a> | <a href="/admin" class="text-white text-decoration-underline">Admin</a></div>
+    </footer>
     <script src="/js/app.js"></script>
   </body>
 </html>

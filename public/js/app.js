@@ -200,7 +200,8 @@ document.addEventListener('DOMContentLoaded', () => {
     } finally {
       if (submitBtn) submitBtn.disabled = false;
     }
-  });
+    }); // end submit handler
+  } // end if(form)
 
   // Gallery: fetch and display recent images
   async function loadGallery() {
@@ -223,7 +224,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) {
       gallery.innerHTML = '<div class="text-primary">Could not load images.</div>';
     }
-    });
   }
 
   // Load gallery on pages that include it

@@ -49,23 +49,19 @@ db.serialize(() => {
 
 
 const app = express();
-// Set CSP header to allow OpenCage API
-// Set CSP header to allow OpenCage API, Bootstrap CDN, and all required resources for geocoding and UI
-app.use((req, res, next) => {
-  res.setHeader(
-    "Content-Security-Policy",
-    [
-      "default-src 'self';",
-      "connect-src 'self' https://api.opencagedata.com https://cdn.jsdelivr.net;",
-      "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;",
-      "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;",
-      "img-src 'self' data: https://cdn.jsdelivr.net;",
-      "font-src 'self' https://cdn.jsdelivr.net;"
-    ].join(' ')
-  );
-  next();
-});
-app.use(helmet());
+// Use Helmet with an explicit Content Security Policy that allows the CDN
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      connectSrc: ["'self'", 'https://api.opencagedata.com', 'https://cdn.jsdelivr.net'],
+      scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'],
+      imgSrc: ["'self'", 'data:', 'https://cdn.jsdelivr.net'],
+      fontSrc: ["'self'", 'https://cdn.jsdelivr.net']
+    }
+  }
+}));
 app.use(express.json({ limit: '8mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());

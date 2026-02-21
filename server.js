@@ -56,9 +56,12 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       connectSrc: ["'self'", 'https://api.opencagedata.com', 'https://cdn.jsdelivr.net'],
       scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'],
-      styleSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'],
-      imgSrc: ["'self'", 'data:', 'https://cdn.jsdelivr.net'],
-      fontSrc: ["'self'", 'https://cdn.jsdelivr.net']
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://fonts.googleapis.com'],
+      // allow font files from Google
+      fontSrc: ["'self'", 'https://cdn.jsdelivr.net', 'https://fonts.gstatic.com'],
+      // specifically allow style elements from Google Fonts
+      styleSrcElem: ["'self'", 'https://fonts.googleapis.com', 'https://cdn.jsdelivr.net'],
+      imgSrc: ["'self'", 'data:', 'https://cdn.jsdelivr.net']
     }
   }
 }));

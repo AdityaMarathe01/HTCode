@@ -64,6 +64,23 @@ document.addEventListener('DOMContentLoaded', () => {
           locStatus.textContent = msg;
           locStatus.style.color = '#d32f2f';
         }
+        // Try approximate IP-based fallback (useful when geolocation is blocked or unavailable)
+        try {
+          fetch('https://ipapi.co/json/')
+            .then(r => r.json())
+            .then(data => {
+              if (data && isFinite(parseFloat(data.latitude)) && isFinite(parseFloat(data.longitude))) {
+                const latEl2 = document.getElementById('latitude');
+                const lonEl2 = document.getElementById('longitude');
+                if (latEl2) latEl2.value = parseFloat(data.latitude);
+                if (lonEl2) lonEl2.value = parseFloat(data.longitude);
+                if (locStatus) {
+                  locStatus.textContent = `≈ Approx location set (${parseFloat(data.latitude).toFixed(4)}, ${parseFloat(data.longitude).toFixed(4)})`;
+                  locStatus.style.color = '#1976d2';
+                }
+              }
+            }).catch(()=>{});
+        } catch (e) {}
       },
       { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
     );

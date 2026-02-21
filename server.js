@@ -54,7 +54,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      connectSrc: ["'self'", 'https://api.opencagedata.com', 'https://cdn.jsdelivr.net'],
+      connectSrc: ["'self'", 'https://api.opencagedata.com', 'https://cdn.jsdelivr.net', 'https://ipapi.co'],
       scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'],
       styleSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://fonts.googleapis.com'],
       // allow font files from Google
@@ -254,6 +254,24 @@ app.get('/api/admin/reports', authMiddleware, (req, res) => {
       res.json({ reports: enhanced });
     } catch (e) {
       res.json({ reports: rows });
+    }
+  });
+});
+
+// Public gallery endpoint used by the report form to show recent images
+app.get('/api/gallery', async (req, res) => {
+  db.all('SELECT image_path FROM reports ORDER BY created_at DESC LIMIT 20', [], (err, rows) => {
+    if (err) return res.status(500).json({ error: 'DB error' });
+    try {
+      const imgs = [];
+      rows.forEach(r => {
+        if (!r.image_path) return;
+        const parts = String(r.image_path).split(',').map(s => s.trim()).filter(Boolean);
+        parts.forEach(p => imgs.push(p));
+      });
+      res.json({ images: imgs.slice(0, 20) });
+    } catch (e) {
+      res.json({ images: [] });
     }
   });
 });
